@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:handover/domain/usecases/get_points_between_src_and_dst_usecase.dart';
@@ -16,15 +17,19 @@ part 'map_screen_state_holder.dart';
 class MapScreenBloc extends Bloc<MapScreenEvent, MapScreenState> {
   final GetPointsBetweenSrcAndDstUsecase _getPointsBetweenSrcAndDstUsecaseImpl;
   final ShowDeliveryStatusNotificationUsecase _showDeliveryStatusNotificationUsecaseImpl;
+  final FlutterBackgroundService _flutterBackgroundService;
 
   static const fiveKilometers = 5;
   static const oneHundredMeters = 0.1;
+  static const notificationId = 4554;
 
   MapScreenBloc({
     required GetPointsBetweenSrcAndDstUsecase getPointsBetweenSrcAndDstUsecaseImpl,
     required ShowDeliveryStatusNotificationUsecase showDeliveryStatusNotificationUsecase,
+    required FlutterBackgroundService flutterBackgroundService,
   })  : _getPointsBetweenSrcAndDstUsecaseImpl = getPointsBetweenSrcAndDstUsecaseImpl,
         _showDeliveryStatusNotificationUsecaseImpl = showDeliveryStatusNotificationUsecase,
+        _flutterBackgroundService = flutterBackgroundService,
         super(
           const MapScreenInitialState(
             mapScreenStateHolder: MapScreenStateHolder(
@@ -96,6 +101,12 @@ class MapScreenBloc extends Bloc<MapScreenEvent, MapScreenState> {
       ),
     );
     await Future.delayed(const Duration(seconds: 2));
+    _flutterBackgroundService.invoke("stopService");
+    await _showDeliveryStatusNotificationUsecaseImpl.show(
+      notificationId: notificationId,
+      title: 'Package delivered',
+      message: 'Please rate your experience.',
+    );
     emit(MapScreenPackageDeliveryCompletedState(stateHolder: state.stateHolder));
   }
 
@@ -116,14 +127,14 @@ class MapScreenBloc extends Bloc<MapScreenEvent, MapScreenState> {
       );
       if (distanceFromPickUpPoint <= fiveKilometers && showPushFor5KMPickUp) {
         await _showDeliveryStatusNotificationUsecaseImpl.show(
-          notificationId: 4554,
+          notificationId: notificationId,
           title: 'Passed 5KM Range',
           message: 'The carrier has passed the 5KM range.',
         );
         showPushFor5KMPickUp = false;
       } else if (distanceFromPickUpPoint <= oneHundredMeters && showPushFor100MetersPickUp) {
         await _showDeliveryStatusNotificationUsecaseImpl.show(
-          notificationId: 4554,
+          notificationId: notificationId,
           title: 'Will Arrive Shortly',
           message: 'The carrier will arrive shortly and pick up the package',
         );
@@ -158,7 +169,7 @@ class MapScreenBloc extends Bloc<MapScreenEvent, MapScreenState> {
       );
       if (distanceFromDeliveryPoint <= fiveKilometers && showPushFor5KMPickUp) {
         await _showDeliveryStatusNotificationUsecaseImpl.show(
-          notificationId: 4554,
+          notificationId: notificationId,
           title: 'Within 5KM',
           message: 'The carrier will arrive to the delivery destination',
         );
